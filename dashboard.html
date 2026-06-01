@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataAnalyst Agent — Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=Cabinet+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #07071A;
+    --bg-2:     #0C0C2A;
+    --bg-3:     #10103A;
+    --purple:   #7B5CF5;
+    --purple-d: #5B3DD5;
+    --purple-g: rgba(123,92,245,0.15);
+    --cyan:     #00D4FF;
+    --cyan-g:   rgba(0,212,255,0.12);
+    --green:    #00E5A0;
+    --green-g:  rgba(0,229,160,0.12);
+    --orange:   #FF7846;
+    --orange-g: rgba(255,120,70,0.12);
+    --red:      #FF4D6A;
+    --glass:    rgba(255,255,255,0.04);
+    --glass-b:  rgba(255,255,255,0.08);
+    --border:   rgba(255,255,255,0.07);
+    --border-h: rgba(123,92,245,0.4);
+    --text-1:   #F0EEFF;
+    --text-2:   #9B97C8;
+    --text-3:   #5C5A8A;
+    --sidebar-w: 64px;
+    --header-h:  56px;
+    --status-h:  32px;
+    --radius:    14px;
+    --radius-sm: 8px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text-1);
+    font-family: 'Cabinet Grotesk', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+
+  /* ── Ambient Orbs ── */
+  .orb-layer {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none; overflow: hidden;
+  }
+  .orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(120px); opacity: 0.35;
+    animation: orb-drift 18s ease-in-out infinite alternate;
+  }
+  .orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, #7B5CF5 0%, transparent 70%); top: -200px; left: 10%; animation-duration: 20s; }
+  .orb-2 { width: 400px; height: 400px; background: radial-gradient(circle, #00D4FF 0%, transparent 70%); top: 30%; right: 5%; animation-duration: 14s; animation-delay: -5s; }
+  .orb-3 { width: 300px; height: 300px; background: radial-gradient(circle, #00E5A0 0%, transparent 70%); bottom: 10%; left: 30%; animation-duration: 22s; animation-delay: -8s; }
+  @keyframes orb-drift {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(40px, 30px) scale(1.1); }
+  }
+
+  /* ── Layout Shell ── */
+  .shell {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    grid-template-rows: var(--header-h) 1fr var(--status-h);
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    grid-row: 1 / -1;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 12px 0;
+    background: rgba(7,7,26,0.7);
+    border-right: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    gap: 4px;
+    z-index: 20;
+  }
+  .sidebar-logo {
+    width: 36px; height: 36px; margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 20px rgba(123,92,245,0.5);
+    flex-shrink: 0;
+  }
+  .sidebar-logo svg { width: 20px; height: 20px; }
+  .nav-item {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-3); cursor: pointer;
+    transition: all 200ms ease;
+    position: relative;
+  }
+  .nav-item:hover { background: var(--glass-b); color: var(--text-1); }
+  .nav-item.active {
+    background: var(--purple-g);
+    color: var(--purple);
+    box-shadow: 0 0 0 1px rgba(123,92,245,0.3);
+  }
+  .nav-item svg { width: 18px; height: 18px; }
+  .nav-item .tooltip {
+    position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+    background: var(--bg-3); border: 1px solid var(--border);
+    color: var(--text-1); font-size: 12px; padding: 4px 8px; border-radius: 6px;
+    white-space: nowrap; pointer-events: none; opacity: 0;
+    transition: opacity 150ms; font-family: 'Cabinet Grotesk', sans-serif;
+  }
+  .nav-item:hover .tooltip { opacity: 1; }
+  .sidebar-sep { width: 24px; height: 1px; background: var(--border); margin: 6px 0; }
+  .sidebar-bottom { margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple-d), var(--cyan));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+    cursor: pointer; border: 2px solid var(--border-h);
+  }
+
+  /* ── Header ── */
+  .header {
+    grid-column: 2; grid-row: 1;
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 20px;
+    background: rgba(7,7,26,0.6);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    z-index: 10;
+  }
+  .header-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; font-weight: 700;
+    color: var(--text-1);
+    letter-spacing: -0.2px;
+  }
+  .header-title span { color: var(--purple); }
+  .header-sep { width: 1px; height: 20px; background: var(--border); }
+  .breadcrumb { color: var(--text-3); font-size: 12px; font-family: 'DM Mono', monospace; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+  .agent-badge {
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 12px; border-radius: 20px;
+    background: rgba(0,229,160,0.08);
+    border: 1px solid rgba(0,229,160,0.25);
+    font-size: 12px; color: var(--green);
+    font-family: 'DM Mono', monospace;
+  }
+  .agent-badge .pulse-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .header-action {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--glass); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-2); cursor: pointer; transition: all 200ms;
+  }
+  .header-action:hover { background: var(--glass-b); color: var(--text-1); }
+  .header-action svg { width: 15px; height: 15px; }
+
+  .notif-btn { position: relative; }
+  .notif-dot {
+    position: absolute; top: 5px; right: 5px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--orange); border: 1px solid var(--bg);
+  }
+
+  /* ── Main Content ── */
+  .main {
+    grid-column: 2; grid-row: 2;
+    overflow-y: auto; overflow-x: hidden;
+    padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 16px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .main::-webkit-scrollbar { width: 4px; }
+  .main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ── Glass Card ── */
+  .card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(16px);
+    transition: transform 300ms ease, box-shadow 300ms ease, border-color 300ms ease;
+    transform-style: preserve-3d;
+    cursor: default;
+  }
+  .card:hover {
+    border-color: var(--border-h);
+    box-shadow: 0 8px 40px rgba(123,92,245,0.15);
+  }
+
+  /* ── Stats Row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+  .stat-card { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .stat-top { display: flex; align-items: flex-start; justify-content: space-between; }
+  .stat-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stat-icon svg { width: 18px; height: 18px; }
+  .stat-icon.purple { background: var(--purple-g); color: var(--purple); box-shadow: 0 0 16px rgba(123,92,245,0.25); }
+  .stat-icon.cyan   { background: var(--cyan-g);   color: var(--cyan);   box-shadow: 0 0 16px rgba(0,212,255,0.2); }
+  .stat-icon.green  { background: var(--green-g);  color: var(--green);  box-shadow: 0 0 16px rgba(0,229,160,0.2); }
+  .stat-icon.orange { background: var(--orange-g); color: var(--orange); box-shadow: 0 0 16px rgba(255,120,70,0.2); }
+
+  .stat-delta {
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    padding: 2px 7px; border-radius: 20px; font-weight: 500;
+  }
+  .stat-delta.up   { background: rgba(0,229,160,0.1); color: var(--green); }
+  .stat-delta.down { background: rgba(255,77,106,0.1); color: var(--red); }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 700;
+    letter-spacing: -0.5px; line-height: 1;
+  }
+  .stat-value.purple { color: var(--purple); text-shadow: 0 0 20px rgba(123,92,245,0.4); }
+  .stat-value.cyan   { color: var(--cyan);   text-shadow: 0 0 20px rgba(0,212,255,0.35); }
+  .stat-value.green  { color: var(--green);  text-shadow: 0 0 20px rgba(0,229,160,0.35); }
+  .stat-value.orange { color: var(--orange); text-shadow: 0 0 20px rgba(255,120,70,0.35); }
+
+  .stat-label { font-size: 12px; color: var(--text-3); font-weight: 500; letter-spacing: 0.3px; }
+
+  .spark { width: 100%; height: 28px; margin-top: 4px; }
+
+  /* ── Mid Row ── */
+  .mid-row { display: grid; grid-template-columns: 1fr 320px; gap: 12px; }
+
+  /* ── Chart Card ── */
+  .chart-card { padding: 18px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-title {
+    font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+    color: var(--text-1); letter-spacing: -0.2px;
+  }
+  .card-sub { font-size: 11px; color: var(--text-3); font-family: 'DM Mono', monospace; margin-top: 2px; }
+  .chart-tabs { display: flex; gap: 4px; }
+  .chart-tab {
+    padding: 4px 10px; border-radius: 6px; font-size: 11px;
+    font-family: 'DM Mono', monospace; cursor: pointer; transition: all 150ms;
+    color: var(--text-3); border: 1px solid transparent;
+  }
+  .chart-tab.active { background: var(--purple-g); color: var(--purple); border-color: rgba(123,92,245,0.3); }
+  .chart-tab:hover:not(.active) { color: var(--text-2); }
+
+  .chart-wrap { position: relative; width: 100%; height: 180px; }
+  .chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
+
+  /* ── Donut Card ── */
+  .donut-card { padding: 18px; display: flex; flex-direction: column; }
+  .donut-wrap { display: flex; align-items: center; gap: 16px; flex: 1; }
+  .donut-svg { flex-shrink: 0; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .legend-item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-label { font-size: 12px; color: var(--text-2); flex: 1; }
+  .legend-pct { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-1); font-weight: 500; }
+  .donut-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; pointer-events: none; }
+  .donut-rel { position: relative; }
+  .donut-center-val { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: var(--text-1); }
+  .donut-center-sub { font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; }
+
+  /* ── Bottom Row ── */
+  .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── AI Query ── */
+  .ai-card { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .ai-input-wrap {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px;
+    transition: border-color 200ms, box-shadow 200ms;
+  }
+  .ai-input-wrap:focus-within {
+    border-color: rgba(123,92,245,0.5);
+    box-shadow: 0 0 0 3px rgba(123,92,245,0.08), 0 0 20px rgba(123,92,245,0.15);
+  }
+  .ai-input-icon { color: var(--purple); flex-shrink: 0; }
+  .ai-input-icon svg { width: 16px; height: 16px; }
+  .ai-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text-1); font-family: 'DM Mono', monospace; font-size: 13px;
+    caret-color: var(--purple);
+  }
+  .ai-input::placeholder { color: var(--text-3); }
+  .ai-send {
+    width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--purple), var(--purple-d));
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    color: white; transition: all 150ms;
+    box-shadow: 0 0 12px rgba(123,92,245,0.4);
+  }
+  .ai-send:hover { transform: scale(1.08); box-shadow: 0 0 20px rgba(123,92,245,0.6); }
+  .ai-send svg { width: 13px; height: 13px; }
+
+  .ai-suggestions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ai-chip {
+    padding: 4px 10px; border-radius: 20px; font-size: 11px;
+    border: 1px solid var(--border); color: var(--text-2);
+    cursor: pointer; transition: all 150ms;
+    background: var(--glass); font-family: 'DM Mono', monospace;
+  }
+  .ai-chip:hover { border-color: rgba(123,92,245,0.4); color: var(--purple); background: var(--purple-g); }
+
+  /* ── Thinking Panel ── */
+  .think-steps { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; }
+  .think-step {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,0.2);
+    border-left: 2px solid var(--border); transition: border-color 200ms;
+  }
+  .think-step.done  { border-left-color: var(--green); }
+  .think-step.active { border-left-color: var(--purple); animation: think-pulse 1.5s ease infinite; }
+  .think-step.wait  { border-left-color: var(--border); opacity: 0.5; }
+  @keyframes think-pulse { 0%,100% { border-left-color: var(--purple); } 50% { border-left-color: rgba(123,92,245,0.3); } }
+
+  .step-icon { margin-top: 1px; flex-shrink: 0; }
+  .step-icon svg { width: 13px; height: 13px; }
+  .step-icon.done   { color: var(--green); }
+  .step-icon.active { color: var(--purple); }
+  .step-icon.wait   { color: var(--text-3); }
+  .step-text { font-size: 12px; color: var(--text-2); font-family: 'DM Mono', monospace; line-height: 1.4; }
+  .step-text span { color: var(--text-3); }
+  .step-time { margin-left: auto; font-size: 10px; color: var(--text-3); font-family: 'DM Mono', monospace; flex-shrink: 0; }
+
+  /* ── Report Output ── */
+  .report-card { padding: 18px; }
+  .report-body { font-size: 13px; line-height: 1.7; color: var(--text-2); margin-top: 10px; }
+  .report-body strong { color: var(--text-1); }
+  .report-body .hi-purple { color: var(--purple); }
+  .report-body .hi-cyan   { color: var(--cyan); }
+  .report-body .hi-green  { color: var(--green); }
+  .report-body .hi-orange { color: var(--orange); }
+  .report-metric {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px; border-radius: 5px;
+    background: var(--purple-g); color: var(--purple);
+    font-family: 'DM Mono', monospace; font-size: 12px;
+  }
+  .report-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .btn {
+    padding: 6px 14px; border-radius: 8px; font-size: 12px;
+    font-family: 'Cabinet Grotesk', sans-serif; font-weight: 600;
+    cursor: pointer; transition: all 150ms; border: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn svg { width: 13px; height: 13px; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--purple), var(--purple-d));
+    color: white;
+    box-shadow: 0 0 16px rgba(123,92,245,0.35);
+  }
+  .btn-primary:hover { box-shadow: 0 0 24px rgba(123,92,245,0.55); transform: translateY(-1px); }
+  .btn-ghost {
+    background: var(--glass); border: 1px solid var(--border); color: var(--text-2);
+  }
+  .btn-ghost:hover { border-color: var(--border-h); color: var(--text-1); }
+
+  /* ── Table ── */
+  .table-card { padding: 18px; }
+  .data-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .data-table th {
+    text-align: left; font-size: 10px; font-weight: 600;
+    color: var(--text-3); letter-spacing: 0.8px; text-transform: uppercase;
+    padding: 0 8px 8px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+  .data-table td {
+    padding: 9px 8px; font-size: 12px; color: var(--text-2);
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 150ms;
+  }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); color: var(--text-1); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table .rank { font-family: 'DM Mono', monospace; color: var(--text-3); }
+  .data-table .product-name { color: var(--text-1); font-weight: 500; }
+  .data-table .revenue-val { font-family: 'DM Mono', monospace; color: var(--cyan); }
+  .data-table .growth-val { font-family: 'DM Mono', monospace; }
+  .data-table .growth-val.up { color: var(--green); }
+  .data-table .growth-val.dn { color: var(--red); }
+
+  .progress-bar { width: 60px; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--purple), var(--cyan)); }
+
+  /* ── Status Bar ── */
+  .statusbar {
+    grid-column: 2; grid-row: 3;
+    display: flex; align-items: center; gap: 16px;
+    padding: 0 20px;
+    background: rgba(7,7,26,0.8);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-3);
+  }
+  .status-item { display: flex; align-items: center; gap: 5px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .status-dot.green  { background: var(--green);  box-shadow: 0 0 6px var(--green); }
+  .status-dot.cyan   { background: var(--cyan);   box-shadow: 0 0 6px var(--cyan); }
+  .status-dot.orange { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+  .status-sep { width: 1px; height: 14px; background: var(--border); }
+  .status-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+  .version-tag { color: var(--purple); }
+
+  /* ── Scrollbar for think-steps ── */
+  .think-steps::-webkit-scrollbar { width: 3px; }
+  .think-steps::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Reduced motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    .orb, .pulse-dot, .think-step.active { animation: none !important; }
+    .card { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Ambient orbs -->
+<div class="orb-layer" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="shell">
+
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar" aria-label="Main navigation">
+    <div class="sidebar-logo" aria-label="DataAnalyst Agent">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+
+    <button class="nav-item active" aria-label="Dashboard" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span class="tooltip">Dashboard</span>
+    </button>
+
+    <button class="nav-item" aria-label="Analytics">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="tooltip">Analytics</span>
+    </button>
+
+    <button class="nav-item" aria-label="AI Agent">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      <span class="tooltip">AI Agent</span>
+    </button>
+
+    <button class="nav-item" aria-label="Reports">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="tooltip">Reports</span>
+    </button>
+
+    <div class="sidebar-sep" role="separator"></div>
+
+    <button class="nav-item" aria-label="Segments">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="tooltip">Segments</span>
+    </button>
+
+    <button class="nav-item" aria-label="Data Sources">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+      <span class="tooltip">Data Sources</span>
+    </button>
+
+    <button class="nav-item" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="tooltip">Settings</span>
+    </button>
+
+    <div class="sidebar-bottom">
+      <div class="avatar" role="img" aria-label="User: RA">RA</div>
+    </div>
+  </nav>
+
+  <!-- ── Header ── -->
+  <header class="header">
+    <span class="header-title">Data<span>Analyst</span> Agent</span>
+    <div class="header-sep" role="separator"></div>
+    <span class="breadcrumb">/ dashboard / overview</span>
+    <div class="header-right">
+      <div class="agent-badge" role="status" aria-label="Agent status: Online">
+        <span class="pulse-dot" aria-hidden="true"></span>
+        Agent Online
+      </div>
+      <button class="header-action notif-btn" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="notif-dot" aria-hidden="true"></span>
+      </button>
+      <button class="header-action" aria-label="Refresh data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Main ── -->
+  <main class="main" id="main-content">
+
+    <!-- Stats Row -->
+    <div class="stats-row" role="region" aria-label="Key metrics">
+
+      <article class="card stat-card" id="stat-revenue">
+        <div class="stat-top">
+          <div class="stat-icon purple" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <span class="stat-delta up" aria-label="Up 12.4%">+12.4%</span>
+        </div>
+        <div class="stat-value purple" aria-label="Revenue: $2.4M">$2.4M</div>
+        <div class="stat-label">Total Revenue</div>
+        <svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="sg1" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#7B5CF5" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#7B5CF5" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,22 L10,18 L20,20 L30,14 L40,16 L50,10 L60,12 L70,6 L80,8 L90,4 L100,2" fill="none" stroke="#7B5CF5" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M0,22 L10,18 L20,20 L30,14 L40,16 L50,10 L60,12 L70,6 L80,8 L90,4 L100,2 L100,28 L0,28Z" fill="url(#sg1)"/>
+        </svg>
+      </article>
+
+      <article class="card stat-card" id="stat-users">
+        <div class="stat-top">
+          <div class="stat-icon cyan" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <span class="stat-delta up" aria-label="Up 8.1%">+8.1%</span>
+        </div>
+        <div class="stat-value cyan" aria-label="Active users: 18,492">18,492</div>
+        <div class="stat-label">Active Users</div>
+        <svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="sg2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#00D4FF" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#00D4FF" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,20 L10,16 L20,18 L30,12 L40,15 L50,9 L60,13 L70,7 L80,10 L90,5 L100,3" fill="none" stroke="#00D4FF" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M0,20 L10,16 L20,18 L30,12 L40,15 L50,9 L60,13 L70,7 L80,10 L90,5 L100,3 L100,28 L0,28Z" fill="url(#sg2)"/>
+        </svg>
+      </article>
+
+      <article class="card stat-card" id="stat-conv">
+        <div class="stat-top">
+          <div class="stat-icon green" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </div>
+          <span class="stat-delta up" aria-label="Up 3.2%">+3.2%</span>
+        </div>
+        <div class="stat-value green" aria-label="Conversion rate: 4.7%">4.7%</div>
+        <div class="stat-label">Conversion Rate</div>
+        <svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="sg3" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#00E5A0" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#00E5A0" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,18 L10,14 L20,16 L30,11 L40,13 L50,8 L60,11 L70,14 L80,9 L90,6 L100,4" fill="none" stroke="#00E5A0" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M0,18 L10,14 L20,16 L30,11 L40,13 L50,8 L60,11 L70,14 L80,9 L90,6 L100,4 L100,28 L0,28Z" fill="url(#sg3)"/>
+        </svg>
+      </article>
+
+      <article class="card stat-card" id="stat-churn">
+        <div class="stat-top">
+          <div class="stat-icon orange" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <span class="stat-delta down" aria-label="Down 0.8%">-0.8%</span>
+        </div>
+        <div class="stat-value orange" aria-label="Churn rate: 2.1%">2.1%</div>
+        <div class="stat-label">Churn Rate</div>
+        <svg class="spark" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="sg4" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FF7846" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#FF7846" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,8 L10,10 L20,7 L30,12 L40,9 L50,14 L60,11 L70,16 L80,13 L90,18 L100,20" fill="none" stroke="#FF7846" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M0,8 L10,10 L20,7 L30,12 L40,9 L50,14 L60,11 L70,16 L80,13 L90,18 L100,20 L100,28 L0,28Z" fill="url(#sg4)"/>
+        </svg>
+      </article>
+    </div>
+
+    <!-- Mid Row: Chart + Donut -->
+    <div class="mid-row">
+
+      <!-- Revenue Line Chart -->
+      <article class="card chart-card" aria-label="Revenue trend chart">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Revenue Trend</div>
+            <div class="card-sub">Last 12 months · Updated 2 min ago</div>
+          </div>
+          <div class="chart-tabs" role="tablist">
+            <button class="chart-tab" role="tab" aria-selected="false">1W</button>
+            <button class="chart-tab" role="tab" aria-selected="false">1M</button>
+            <button class="chart-tab active" role="tab" aria-selected="true" aria-current="true">1Y</button>
+            <button class="chart-tab" role="tab" aria-selected="false">ALL</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 540 180" preserveAspectRatio="none" role="img" aria-label="Revenue line chart showing growth over 12 months with anomaly in October">
+            <defs>
+              <linearGradient id="rev-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#7B5CF5" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#7B5CF5" stop-opacity="0"/>
+              </linearGradient>
+              <linearGradient id="rev-line" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#7B5CF5"/>
+                <stop offset="60%" stop-color="#00D4FF"/>
+                <stop offset="100%" stop-color="#00E5A0"/>
+              </linearGradient>
+              <filter id="glow-line">
+                <feGaussianBlur stdDeviation="2" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+              </filter>
+            </defs>
+            <!-- Grid lines -->
+            <line x1="0" y1="20"  x2="540" y2="20"  stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="60"  x2="540" y2="60"  stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="100" x2="540" y2="100" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <line x1="0" y1="140" x2="540" y2="140" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            <!-- Y labels -->
+            <text x="4" y="18"  fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">3M</text>
+            <text x="4" y="58"  fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">2M</text>
+            <text x="4" y="98"  fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">1M</text>
+            <text x="4" y="138" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">0</text>
+            <!-- X labels -->
+            <text x="24"  y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">JAN</text>
+            <text x="69"  y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">FEB</text>
+            <text x="114" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">MAR</text>
+            <text x="159" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">APR</text>
+            <text x="204" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">MAY</text>
+            <text x="249" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">JUN</text>
+            <text x="294" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">JUL</text>
+            <text x="339" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">AUG</text>
+            <text x="384" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">SEP</text>
+            <text x="420" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">OCT</text>
+            <text x="465" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">NOV</text>
+            <text x="510" y="175" fill="#5C5A8A" font-size="9" font-family="DM Mono, monospace">DEC</text>
+            <!-- Area fill -->
+            <path d="M24,130 C50,125 69,120 90,115 C110,110 114,105 135,98 C155,91 159,88 180,82 C200,76 204,74 225,68 C245,62 249,60 270,55 C290,50 294,48 315,43 C335,38 339,42 360,35 C380,28 384,30 405,38 C416,43 420,65 430,55 C440,45 445,22 450,18 C455,28 460,35 465,32 C485,26 510,22 530,18"
+                  fill="url(#rev-grad)" stroke="none"/>
+            <!-- Main line -->
+            <path d="M24,130 C50,125 69,120 90,115 C110,110 114,105 135,98 C155,91 159,88 180,82 C200,76 204,74 225,68 C245,62 249,60 270,55 C290,50 294,48 315,43 C335,38 339,42 360,35 C380,28 384,30 405,38 C416,43 420,65 430,55 C440,45 445,22 450,18 C455,28 460,35 465,32 C485,26 510,22 530,18"
+                  fill="none" stroke="url(#rev-line)" stroke-width="2" stroke-linejoin="round" filter="url(#glow-line)"/>
+            <!-- Anomaly marker at OCT (~430,55) -->
+            <circle cx="430" cy="55" r="6" fill="none" stroke="#FF4D6A" stroke-width="1.5" opacity="0.9"/>
+            <circle cx="430" cy="55" r="3" fill="#FF4D6A"/>
+            <circle cx="430" cy="55" r="10" fill="rgba(255,77,106,0.08)" stroke="rgba(255,77,106,0.2)" stroke-width="1">
+              <animate attributeName="r" values="8;14;8" dur="2s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite"/>
+            </circle>
+            <text x="438" y="48" fill="#FF4D6A" font-size="8" font-family="DM Mono, monospace" font-weight="500">ANOMALY</text>
+          </svg>
+        </div>
+      </article>
+
+      <!-- Customer Segment Donut -->
+      <article class="card donut-card" aria-label="Customer segments donut chart">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Customer Segments</div>
+            <div class="card-sub">Q4 2025 distribution</div>
+          </div>
+        </div>
+        <div class="donut-wrap">
+          <div class="donut-rel">
+            <svg class="donut-svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Donut chart: Enterprise 38%, SMB 27%, Starter 20%, Trial 15%">
+              <defs>
+                <filter id="donut-glow">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+              </defs>
+              <!-- r=46, circumference=289 -->
+              <!-- Enterprise 38% = 109.8 -->
+              <circle cx="60" cy="60" r="46" fill="none" stroke="#7B5CF5" stroke-width="12"
+                stroke-dasharray="109.8 289.5" stroke-dashoffset="0"
+                stroke-linecap="butt" transform="rotate(-90 60 60)" filter="url(#donut-glow)"/>
+              <!-- SMB 27% = 78.2 -->
+              <circle cx="60" cy="60" r="46" fill="none" stroke="#00D4FF" stroke-width="12"
+                stroke-dasharray="78.2 289.5" stroke-dashoffset="-109.8"
+                stroke-linecap="butt" transform="rotate(-90 60 60)"/>
+              <!-- Starter 20% = 57.9 -->
+              <circle cx="60" cy="60" r="46" fill="none" stroke="#00E5A0" stroke-width="12"
+                stroke-dasharray="57.9 289.5" stroke-dashoffset="-188"
+                stroke-linecap="butt" transform="rotate(-90 60 60)"/>
+              <!-- Trial 15% = 43.4 -->
+              <circle cx="60" cy="60" r="46" fill="none" stroke="#FF7846" stroke-width="12"
+                stroke-dasharray="43.4 289.5" stroke-dashoffset="-245.9"
+                stroke-linecap="butt" transform="rotate(-90 60 60)"/>
+            </svg>
+            <div class="donut-center" aria-hidden="true">
+              <span class="donut-center-val">18.5K</span>
+              <span class="donut-center-sub">USERS</span>
+            </div>
+          </div>
+          <div class="donut-legend" role="list">
+            <div class="legend-item" role="listitem">
+              <span class="legend-dot" style="background:#7B5CF5;box-shadow:0 0 6px #7B5CF5" aria-hidden="true"></span>
+              <span class="legend-label">Enterprise</span>
+              <span class="legend-pct">38%</span>
+            </div>
+            <div class="legend-item" role="listitem">
+              <span class="legend-dot" style="background:#00D4FF;box-shadow:0 0 6px #00D4FF" aria-hidden="true"></span>
+              <span class="legend-label">SMB</span>
+              <span class="legend-pct">27%</span>
+            </div>
+            <div class="legend-item" role="listitem">
+              <span class="legend-dot" style="background:#00E5A0;box-shadow:0 0 6px #00E5A0" aria-hidden="true"></span>
+              <span class="legend-label">Starter</span>
+              <span class="legend-pct">20%</span>
+            </div>
+            <div class="legend-item" role="listitem">
+              <span class="legend-dot" style="background:#FF7846;box-shadow:0 0 6px #FF7846" aria-hidden="true"></span>
+              <span class="legend-label">Trial</span>
+              <span class="legend-pct">15%</span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Bottom Row: AI Panel + Table -->
+    <div class="bottom-row">
+
+      <!-- AI Query + Thinking + Report -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+        <!-- AI Query Input -->
+        <article class="card ai-card" aria-label="AI analysis query">
+          <div class="card-header" style="margin-bottom:0">
+            <div>
+              <div class="card-title">AI Query</div>
+              <div class="card-sub">Ask anything · Connected to localhost:8000/analyze</div>
+            </div>
+            <div class="agent-badge" style="font-size:11px;padding:3px 10px" role="status">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              Ready
+            </div>
+          </div>
+          <div class="ai-input-wrap" role="search">
+            <span class="ai-input-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input
+              class="ai-input"
+              id="ai-query"
+              type="text"
+              placeholder="e.g. Why did revenue spike in March?"
+              aria-label="Ask a data analysis question"
+              autocomplete="off"
+            />
+            <button class="ai-send" id="ai-send-btn" aria-label="Send query">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+          <div class="ai-suggestions" role="list" aria-label="Quick queries">
+            <button class="ai-chip" role="listitem">Revenue anomaly Oct?</button>
+            <button class="ai-chip" role="listitem">Top churn drivers</button>
+            <button class="ai-chip" role="listitem">Segment forecast Q1</button>
+            <button class="ai-chip" role="listitem">Compare vs last year</button>
+          </div>
+        </article>
+
+        <!-- Thinking Steps -->
+        <article class="card" style="padding:16px" aria-label="Agent thinking process" aria-live="polite">
+          <div class="card-header" style="margin-bottom:10px">
+            <div class="card-title">Agent Reasoning</div>
+            <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--purple)">3 / 5 steps</span>
+          </div>
+          <div class="think-steps" id="think-steps" role="log" aria-label="Agent reasoning steps">
+            <div class="think-step done">
+              <span class="step-icon done" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="step-text">Query parsed · <span>intent: revenue_anomaly · entities: [Oct, 2025]</span></span>
+              <span class="step-time">0.12s</span>
+            </div>
+            <div class="think-step done">
+              <span class="step-icon done" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="step-text">Data fetched · <span>transactions table · 14,832 rows · window: Q4-2025</span></span>
+              <span class="step-time">0.87s</span>
+            </div>
+            <div class="think-step active">
+              <span class="step-icon active" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </span>
+              <span class="step-text">Running anomaly detection · <span>IsolationForest · threshold: 0.85</span></span>
+              <span class="step-time">1.4s…</span>
+            </div>
+            <div class="think-step wait">
+              <span class="step-icon wait" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </span>
+              <span class="step-text">Correlating external signals · <span>awaiting market data feed</span></span>
+              <span class="step-time">—</span>
+            </div>
+            <div class="think-step wait">
+              <span class="step-icon wait" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </span>
+              <span class="step-text">Generating natural language report</span>
+              <span class="step-time">—</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Report Output -->
+        <article class="card report-card" aria-label="Analysis report">
+          <div class="card-header" style="margin-bottom:0">
+            <div>
+              <div class="card-title">Analysis Report</div>
+              <div class="card-sub">Generated · 14 Jun 2025 · 09:41 UTC</div>
+            </div>
+            <span style="font-size:10px;font-family:'DM Mono',monospace;padding:3px 8px;border-radius:5px;background:rgba(0,229,160,0.08);color:var(--green);border:1px solid rgba(0,229,160,0.2)">COMPLETE</span>
+          </div>
+          <div class="report-body">
+            <strong>Revenue Anomaly · October 2025.</strong>
+            The <span class="hi-orange">+34% spike</span> in October revenue is attributable to three concurrent factors:
+            a <span class="hi-purple">$340K enterprise deal closure</span> (Acme Corp),
+            an <span class="hi-cyan">early-renewal campaign</span> that pulled <span class="report-metric">$210K</span> from Q1,
+            and an <span class="hi-green">affiliate partner surge</span> (+18% new paid signups in the SMB tier).
+            Normalized run-rate remains at <span class="report-metric">$2.1M/mo</span>.
+            No underlying data quality issues detected. Confidence: <strong>94.2%</strong>.
+          </div>
+          <div class="report-actions">
+            <button class="btn btn-primary" aria-label="Export report as PDF">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export PDF
+            </button>
+            <button class="btn btn-ghost" aria-label="Share report">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Share
+            </button>
+            <button class="btn btn-ghost" aria-label="Run new analysis">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></svg>
+              Re-run
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <!-- Top Products Table -->
+      <article class="card table-card" aria-label="Top products by revenue">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Top Products</div>
+            <div class="card-sub">Revenue · Nov 2025</div>
+          </div>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" aria-label="View all products">
+            View All
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+        <table class="data-table" aria-describedby="table-desc">
+          <caption id="table-desc" class="visually-hidden">Top 8 products by revenue for November 2025</caption>
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Product</th>
+              <th scope="col">Revenue</th>
+              <th scope="col">Growth</th>
+              <th scope="col">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rank">01</td>
+              <td class="product-name">Enterprise Suite</td>
+              <td class="revenue-val">$680K</td>
+              <td class="growth-val up">+22%</td>
+              <td><div class="progress-bar" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100" aria-label="82% share"><div class="progress-fill" style="width:82%"></div></div></td>
+            </tr>
+            <tr>
+              <td class="rank">02</td>
+              <td class="product-name">Analytics Pro</td>
+              <td class="revenue-val">$410K</td>
+              <td class="growth-val up">+14%</td>
+              <td><div class="progress-bar" role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" aria-label="65% share"><div class="progress-fill" style="width:65%"></div></div></td>
+            </tr>
+            <tr>
+              <td class="rank">03</td>
+              <td class="product-name">Data Connector</td>
+              <td class="revenue-val">$290K</td>
+              <td class="growth-val up">+9%</td>
+              <td><div class="progress-bar" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" aria-label="50% share"><div class="progress-fill" style="width:50%"></div></div></td>
+            </tr>
+            <tr>
+              <td class="rank">04</td>
+              <td class="product-name">API Gateway</td>
+              <td class="revenue-val">$215K</td>
+              <td class="growth-val down">-3%</td>
+              <td><div class="progress-bar" role="progressbar" aria-valuenow="38" aria-valuemin="0" aria-valuemax="100" aria-label="38% share"><div class="progress-fill" style="width:38%"></div></div></td>
+            </tr>
+            <tr>
+              <td class="rank">05</td>
+              <td class="product-name">Report Builder</td>
+              <td class="revenue-val">$178K</td>
+              <td class="growth-val up">+31%</td>
+              <td><div class="progress-bar" role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" aria-label="32% share"><div class="progress-fill" style="width:32%"></div></div></td>
+            </tr>
+            <tr>
+              <td class="rank">06</td>
+              <td class="product-name">ML Pipeline</td>
+              <td class="revenue-val">$142K</td>
+              <td class="growth-val up">+18%</td>
+              <td><div class="progress-bar" role="progressbar" aria-valuenow="26" aria-valuemin="0" aria-valuemax="100" aria-label="26% share"><div class="progress-fill" style="width:26%"></div></div></td>
+            </tr>
+            <tr>
+              <td class="rank">07</td>
+              <td class="product-name">Starter Pack</td>
+              <td class="revenue-val">$98K</td>
+              <td class="growth-val down">-1%</td>
+              <td><div class="progress-bar" role="progressbar" aria-valuenow="18" aria-valuemin="0" aria-valuemax="100" aria-label="18% share"><div class="progress-fill" style="width:18%"></div></div></td>
+            </tr>
+            <tr>
+              <td class="rank">08</td>
+              <td class="product-name">Add-ons</td>
+              <td class="revenue-val">$64K</td>
+              <td class="growth-val up">+5%</td>
+              <td><div class="progress-bar" role="progressbar" aria-valuenow="11" aria-valuemin="0" aria-valuemax="100" aria-label="11% share"><div class="progress-fill" style="width:11%"></div></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+    </div>
+
+  </main>
+
+  <!-- ── Status Bar ── -->
+  <footer class="statusbar" role="contentinfo" aria-label="System status">
+    <div class="status-item">
+      <span class="status-dot green" aria-hidden="true"></span>
+      <span>n8n Connected</span>
+    </div>
+    <div class="status-sep" role="separator"></div>
+    <div class="status-item">
+      <span class="status-dot cyan" aria-hidden="true"></span>
+      <span>API · 48ms</span>
+    </div>
+    <div class="status-sep" role="separator"></div>
+    <div class="status-item">
+      <span class="status-dot orange" aria-hidden="true"></span>
+      <span>1 alert</span>
+    </div>
+    <div class="status-sep" role="separator"></div>
+    <span>14,832 rows · last sync 2m ago</span>
+    <div class="status-right">
+      <span>Model: claude-sonnet-4-6</span>
+      <div class="status-sep" role="separator"></div>
+      <span class="version-tag">v1.4.2</span>
+      <div class="status-sep" role="separator"></div>
+      <span>2026-06-01 · 09:41 UTC</span>
+    </div>
+  </footer>
+
+</div>
+
+<style>
+  /* Visually hidden utility for captions */
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+</style>
+
+<script>
+  /* ── 3D Tilt on cards ── */
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width  - 0.5;
+      const y = (e.clientY - r.top)  / r.height - 0.5;
+      card.style.transform = `perspective(600px) rotateX(${-y * 6}deg) rotateY(${x * 6}deg) translateZ(4px)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = '';
+    });
+  });
+
+  /* ── Chart tab switching ── */
+  document.querySelectorAll('.chart-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.chart-tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+        t.removeAttribute('aria-current');
+      });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      tab.setAttribute('aria-current', 'true');
+    });
+  });
+
+  /* ── AI chip → fill input ── */
+  document.querySelectorAll('.ai-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.getElementById('ai-query').value = chip.textContent.trim();
+      document.getElementById('ai-query').focus();
+    });
+  });
+
+  /* ── AI Send → POST to localhost:8000/analyze ── */
+  async function runQuery(query) {
+    if (!query.trim()) return;
+
+    const stepsEl = document.getElementById('think-steps');
+    const sendBtn = document.getElementById('ai-send-btn');
+    sendBtn.disabled = true;
+
+    // Reset steps to loading state
+    const steps = stepsEl.querySelectorAll('.think-step');
+    steps.forEach((s, i) => {
+      s.className = 'think-step wait';
+      s.querySelector('.step-icon').className = 'step-icon wait';
+    });
+
+    try {
+      const res = await fetch('http://localhost:8000/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+      if (!res.ok) throw new Error('API error ' + res.status);
+      const data = await res.json();
+      // Update report body with response if present
+      if (data.report) {
+        document.querySelector('.report-body').innerHTML = data.report;
+      }
+    } catch (err) {
+      // Show graceful fallback — API not running in demo
+      console.info('Agent API offline (demo mode):', err.message);
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  document.getElementById('ai-send-btn').addEventListener('click', () => {
+    runQuery(document.getElementById('ai-query').value);
+  });
+  document.getElementById('ai-query').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runQuery(e.target.value);
+  });
+
+  /* ── Animate thinking steps loop (demo) ── */
+  (function animateSteps() {
+    const steps = document.querySelectorAll('.think-step');
+    let current = 0;
+
+    const icons = {
+      done: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+      active: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+      wait: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`
+    };
+
+    function setStepState(i, state) {
+      const s = steps[i];
+      s.className = 'think-step ' + state;
+      const icon = s.querySelector('.step-icon');
+      icon.className = 'step-icon ' + state;
+      icon.innerHTML = icons[state];
+    }
+
+    function tick() {
+      steps.forEach((_, i) => {
+        if (i < current) setStepState(i, 'done');
+        else if (i === current) setStepState(i, 'active');
+        else setStepState(i, 'wait');
+      });
+      current = (current + 1) % (steps.length + 1);
+      if (current > steps.length) current = 0;
+    }
+
+    setInterval(tick, 2000);
+  })();
+
+  /* ── Donut segment hover highlight ── */
+  document.querySelectorAll('.legend-item').forEach((item, i) => {
+    const colors = ['#7B5CF5','#00D4FF','#00E5A0','#FF7846'];
+    item.addEventListener('mouseenter', () => {
+      item.style.opacity = '1';
+      item.querySelector('.legend-label').style.color = colors[i];
+    });
+    item.addEventListener('mouseleave', () => {
+      item.querySelector('.legend-label').style.color = '';
+    });
+  });
+</script>
+</body>
+</html>

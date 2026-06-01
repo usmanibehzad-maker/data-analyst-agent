@@ -1,0 +1,20 @@
+# Core LLM + agent framework
+langchain>=0.3.0
+langchain-anthropic>=0.3.0
+langgraph>=0.2.0
+
+# Data
+pandas>=2.1.0
+numpy>=1.26.0
+sqlalchemy>=2.0.0
+openpyxl>=3.1.0
+
+# Database drivers
+psycopg2-binary>=2.9.0
+pymysql>=1.1.0
+
+# Visualization
+matplotlib>=3.8.0
+
+# Utilities
+python-dotenv>=1.0.0
